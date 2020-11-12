@@ -1,0 +1,6 @@
+venv
+.idea
+logs
+data
+setup.json
+__pycache__

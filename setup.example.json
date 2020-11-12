@@ -1,0 +1,23 @@
+{
+    "data_dir": "data",
+    "log_path": "logs",
+    "mail":{
+        "smtp": "",
+        "port": 587,
+        "user": "",
+        "pass": "",
+        "from_name": "",
+        "from_email": ""
+    },
+    "repositories": [
+        {
+            "rep_url": "",
+            "branch": "master",
+            "env_folder_path": "venv",
+            "test_folder_path": "tests",
+            "mails": [
+                "some@mail.com"
+            ]
+        }
+    ]
+}
