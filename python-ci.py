@@ -31,6 +31,9 @@ class Tester:
         sender_email = self.config['mail']['user']
         password = self.config['mail']['pass']
 
+        if smtp_server == "":
+            return False
+
         # Create a secure SSL context
         context = ssl.create_default_context()
 
