@@ -144,7 +144,7 @@ class Tester:
                 output = subprocess.getoutput('pytest -v '+path+"/"+rep['test_folder_path'])
                 self.logger.print(output)
 
-                if re.search(r'\bFAILED\b', output):
+                if re.search(r'\bFAILED\b', output) or re.search(r'\bERRORS\b', output):
                     self.logger.print("One or more tests failed!", False, False)
                     print(Bcolors.WARNING + "One or more tests failed!" + Bcolors.ENDC)
                     self.send_mail("Test failed...", output, rep['mails'])
