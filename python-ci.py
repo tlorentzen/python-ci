@@ -5,6 +5,7 @@ import subprocess
 import re
 import smtplib, ssl
 from logger import Logger
+from pathlib import Path
 
 
 class Bcolors:
@@ -25,11 +26,23 @@ class Tester:
     logger = None
 
     def send_mail(self, subject, message, mails):
+        try:
+            home = str(Path.home())
+            if os.path.isfile(home+'/.mail.json'):
+                with open(home+'/.mail.json') as f:
+                    mail_config = json.load(f)
+                self.logger.print("Loading mail settings from home")
+            else:
+                mail_config = self.config['mail']
+                self.logger.print("Loading mail settings from config.json")
+        except Exception as inst:
+            print(inst)
+            return False
 
-        smtp_server = self.config['mail']['smtp']
-        port = self.config['mail']['port']
-        sender_email = self.config['mail']['user']
-        password = self.config['mail']['pass']
+        smtp_server = mail_config['smtp']
+        port = mail_config['port']
+        sender_email = mail_config['user']
+        password = mail_config['pass']
 
         if smtp_server == "":
             return False
@@ -45,10 +58,10 @@ class Tester:
             server.ehlo()  # Can be omitted
             server.login(sender_email, password)
 
-            text = 'Subject: {}\n\n From: {}\n\n{}'.format(subject, self.config['mail']['from_name'], message)
+            text = 'Subject: {}\n\n From: {}\n\n{}'.format(subject, mail_config['from_name'], message)
 
             for mail in mails:
-                server.sendmail(self.config['mail']['from_email'], mail, text)
+                server.sendmail(mail_config['from_email'], mail, text)
         except Exception as e:
             # Print any error messages to stdout
             print(e)
@@ -130,7 +143,6 @@ class Tester:
                 # Run tests
                 output = subprocess.getoutput('pytest -v '+path+"/"+rep['test_folder_path'])
                 self.logger.print(output)
-                print(output)
 
                 if re.search(r'\bFAILED\b', output):
                     self.logger.print("One or more tests failed!", False, False)
