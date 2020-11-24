@@ -3,7 +3,6 @@ from git import Repo
 import json
 import subprocess
 import re
-import smtplib, ssl
 from logger import Logger
 from pathlib import Path
 
@@ -25,49 +24,48 @@ class Tester:
     config = None
     logger = None
 
-    def send_mail(self, subject, message, mails):
-        try:
-            home = str(Path.home())
-            if os.path.isfile(home+'/.mail.json'):
-                with open(home+'/.mail.json') as f:
-                    mail_config = json.load(f)
-                self.logger.print("Loading mail settings from home")
-            else:
-                mail_config = self.config['mail']
-                self.logger.print("Loading mail settings from config.json")
-        except Exception as inst:
-            print(inst)
-            return False
-
-        smtp_server = mail_config['smtp']
-        port = mail_config['port']
-        sender_email = mail_config['user']
-        password = mail_config['pass']
-
-        if smtp_server == "":
-            return False
-
-        # Create a secure SSL context
-        context = ssl.create_default_context()
-
-        # Try to log in to server and send email
-        try:
-            server = smtplib.SMTP(smtp_server, port)
-            server.ehlo()  # Can be omitted
-            server.starttls(context=context)  # Secure the connection
-            server.ehlo()  # Can be omitted
-            server.login(sender_email, password)
-
-            text = 'Subject: {}\n\n From: {}\n\n{}'.format(subject, mail_config['from_name'], message)
-
-            for mail in mails:
-                server.sendmail(mail_config['from_email'], mail, text)
-        except Exception as e:
-            # Print any error messages to stdout
-            print(e)
-        finally:
-            server.quit()
-
+    # def send_mail(self, subject, message, mails):
+    #     try:
+    #         home = str(Path.home())
+    #         if os.path.isfile(home+'/.mail.json'):
+    #             with open(home+'/.mail.json') as f:
+    #                 mail_config = json.load(f)
+    #             self.logger.print("Loading mail settings from home")
+    #         else:
+    #             mail_config = self.config['mail']
+    #             self.logger.print("Loading mail settings from config.json")
+    #     except Exception as inst:
+    #         print(inst)
+    #         return False
+    #
+    #     smtp_server = mail_config['smtp']
+    #     port = mail_config['port']
+    #     sender_email = mail_config['user']
+    #     password = mail_config['pass']
+    #
+    #     if smtp_server == "":
+    #         return False
+    #
+    #     # Create a secure SSL context
+    #     context = ssl.create_default_context()
+    #
+    #     # Try to log in to server and send email
+    #     try:
+    #         server = smtplib.SMTP(smtp_server, port)
+    #         server.ehlo()  # Can be omitted
+    #         server.starttls(context=context)  # Secure the connection
+    #         server.ehlo()  # Can be omitted
+    #         server.login(sender_email, password)
+    #
+    #         text = 'Subject: {}\n\n From: {}\n\n{}'.format(subject, mail_config['from_name'], message)
+    #
+    #         for mail in mails:
+    #             server.sendmail(mail_config['from_email'], mail, text)
+    #     except Exception as e:
+    #         # Print any error messages to stdout
+    #         print(e)
+    #     finally:
+    #         server.quit()
 
     def get_local_store_path(self, url, branch):
         if url.endswith(".git"):
@@ -136,18 +134,28 @@ class Tester:
             self.get_repository_name(rep['rep_url'])
             self.logger.print("Activating virtual environment...")
             os.system('source '+path+'/'+rep['env_folder_path']+'/bin/activate')
+
+            index_string = ""
+
+            for index in self.config['extra-indexes']:
+                index_string += "--extra-index-url "+index
+
             self.logger.print("Installing requirements...")
-            os.system('pip3 install -r '+path+'/requirements.txt > /dev/null')
+            os.system('pip3 install -r '+path+'/requirements.txt '+index_string+' > /dev/null')
 
             try:
                 # Run tests
-                output = subprocess.getoutput('pytest -v '+path+"/"+rep['test_folder_path'])
+                if len(rep['test_folder_path']) > 0:
+                    output = subprocess.getoutput('pytest -v '+path+"/"+rep['test_folder_path'])
+                else:
+                    output = subprocess.getoutput('pytest')
+
                 self.logger.print(output)
 
                 if re.search(r'\bFAILED\b', output) or re.search(r'\bERRORS\b', output):
                     self.logger.print("One or more tests failed!", False, False)
                     print(Bcolors.WARNING + "One or more tests failed!" + Bcolors.ENDC)
-                    self.send_mail("Test failed...", output, rep['mails'])
+                    #self.send_mail("Test failed...", output, rep['mails'])
                 else:
                     self.logger.print("Everything OK!", False, False)
                     print(Bcolors.OKGREEN + "Everything OK!" + Bcolors.ENDC)
